@@ -339,7 +339,7 @@ function priceOf(x){
 const round90 = n => Math.max(90, Math.round((n - 90) / 100) * 100 + 90);
 const HIDE = /левое|images|скрин|сделать/i;
 const COLL = new Intl.Collator('ru',{numeric:true});
-const ITEMS = RAW.filter(x => !HIDE.test(x.t)).sort((a,b)=> a.c-b.c || COLL.compare(a.subj,b.subj) || COLL.compare(a.t,b.t)).map((x,i) => { const y = {...x, id:i+1, title:niceTitle(x.t)}; y.p = x.p || priceOf(y); if (x.id) y.id = x.id; return y; });
+const ITEMS = RAW.map(x => ({...x, c:+x.c})).filter(x => !HIDE.test(x.t)).sort((a,b)=> a.c-b.c || COLL.compare(a.subj,b.subj) || COLL.compare(a.t,b.t)).map((x,i) => { const y = {...x, id:i+1, title:niceTitle(x.t)}; y.p = x.p || priceOf(y); if (x.id) y.id = x.id; return y; });
 const SHORT = {'Лабораторная':'ЛБ','Практическая':'ПР','Курсовая':'КР','Реферат':'РФ','Материалы':'МТ'};
 const CONSULT = [{k:30,p:450,l:'Быстрый вопрос'},{k:45,p:690,l:'Разбор темы'},{k:90,p:1190,l:'К защите'}];
 const fmt = n => n.toLocaleString('ru-RU') + ' ₽';
@@ -347,6 +347,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const plural = (n,a,b,c) => { const m=n%10, h=n%100; return (m===1&&h!==11)?a:(m>=2&&m<=4&&(h<10||h>=20))?b:c; };
 const initials = s => s.replace(/[^А-ЯЁA-Zа-яё ]/g,' ').split(' ').filter(w=>w.length>2).slice(0,2).map(w=>w[0].toUpperCase()).join('') || s.slice(0,2).toUpperCase();
 
+const BUILD = '23.09.2026 11:02';
 const S = { tab:'catalog', course:3, subject:null, type:'Все', q:'', owned:new Set(), buys:[], consults:[], bonus:120, first:true, sheet:null, dur:45, slot:null, topic:null, order:'', tickets:[], rv:{vol:'m', focus:['struct','code','logic','gost'], file:'', urgent:false}, reviews:[] };
 try { const c = localStorage.getItem('sk-course'); if (c) S.course = +c; } catch(e) {}
 const app = document.getElementById('app'), layer = document.getElementById('layer');
@@ -452,21 +453,23 @@ function viewCabinet(){
     <button class="btn" data-bot="me">Открыть кабинет в боте</button>
     <div class="sec"><h2>Документы</h2></div>
     ${DOCS_CARD}
-    <p class="fine" style="margin:10px 2px 0">Удалить свои данные или отозвать согласие — в боте: «Помощь» → «Удалить мои данные».</p>`;
+    <p class="fine" style="margin:10px 2px 0">Версия витрины: ${BUILD}</p>
+    <p class="fine" style="margin:6px 2px 0">Удалить свои данные или отозвать согласие — в боте: «Помощь» → «Удалить мои данные».</p>`;
   const id = tgUser ? tgUser.id.toString(36) : '7f3k2q';
   const ref = 't.me/starshiy_kurs_bot?start=ref_' + id;
   return head() + `<section class="hero" style="margin-bottom:6px"><h1>Кабинет</h1></section>
-    <div class="stat"><div><b>${S.bonus}</b><span>баллов · 1 балл = 1 ₽, до 50% заказа</span></div><div><b>${S.buys.length}</b><span>${plural(S.buys.length,'покупка','покупки','покупок')}</span></div></div>
+    <div class="stat"><div><b>${S.bonus}</b><span>баллов · 1 балл = 1 ₽, хоть весь заказ</span></div><div><b>${S.buys.length}</b><span>${plural(S.buys.length,'покупка','покупки','покупок')}</span></div></div>
     <div class="sec"><h2>Мои образцы</h2></div>
     <div class="card" style="padding-block:4px">${S.buys.length ? S.buys.map(p=>`<div class="ticket"><span class="stamp ok" style="font-size:8.5px;padding:3px 5px 2px">куплено</span><span><div class="t">${esc(p.title)}</div><div class="s">${esc(p.subj)} · ${fmt(p.paid)} · чек НПД</div></span><span style="display:flex;flex-direction:column;gap:6px;align-items:flex-end"><button class="b" data-dl="${p.id}">Скачать</button><button class="help-link" data-help="${p.id}">Проблема?</button></span></div>`).join('') : `<div class="empty">Купленные образцы появятся здесь: ссылка на 24 часа и чек самозанятого.</div>`}</div>
     ${S.reviews.length?`<div class="sec"><h2>Проверки курсовых</h2></div><div class="card" style="padding-block:4px">${S.reviews.map(r=>`<div class="ticket"><span class="pill">в работе</span><span><div class="t">${esc(r.file)}</div><div class="s">${esc(r.vol)} · до ${esc(r.due)} · ${fmt(r.sum)}</div></span><span></span></div>`).join('')}</div>`:''}
     ${S.consults.length?`<div class="sec"><h2>Консультации</h2></div><div class="card" style="padding-block:4px">${S.consults.map(c=>`<div class="ticket"><span class="pill ok">записан</span><span><div class="t">${esc(c.subj)}</div><div class="s">${esc(c.when)} · ${c.dur} мин</div></span><span></span></div>`).join('')}</div>`:''}
     <div class="sec"><h2>Пригласи друга</h2></div>
-    <div class="card"><div style="font:400 18px/1.2 var(--display)">Другу −10%,<br>тебе 10% баллами</div>
-      <p class="fine" style="margin:8px 0 0">С каждой первой покупки приглашённого. Баллы не выводятся в деньги и сгорают через 6 месяцев.</p>
+    <div class="card"><div style="font:400 18px/1.2 var(--display)">Другу −15%,<br>тебе до 30% баллами</div>
+      <p class="fine" style="margin:8px 0 0">Баллы идут с каждой покупки приглашённого, а не только с первой: 20%, с трёх друзей — 25%, с шести — 30% и подарки. Баллы не выводятся в деньги и действуют год.</p>
       <div class="ref"><code>${ref}</code><button data-copy="${ref}">Копировать</button></div></div>
     <div class="sec"><h2>Документы</h2></div>
-    ${DOCS_CARD}`;
+    ${DOCS_CARD}
+    <p class="fine" style="margin:10px 2px 0">Версия витрины: ${BUILD}</p>`;
 }
 
 const TOPICS = [
@@ -524,7 +527,7 @@ function viewSupport(){
       <details><summary>Можно вернуть деньги?</summary><p>Да, если файлы не соответствуют описанию карточки. Возврат по СБП на ту же карту в течение 10 дней, баллы возвращаются на баланс.</p></details>
       <details><summary>Что входит в проверку курсовой?</summary><p>Файл с примечаниями на полях и сводка: структура, код, логика, оформление по ГОСТ. Исправляете вы сами, уточняющие вопросы — 7 дней после сдачи замечаний.</p></details>
       <details><summary>Можете дописать или переписать курсовую?</summary><p>Нет. Мы проверяем вашу работу и объясняем, что исправить, но не пишем текст и код за вас.</p></details>
-      <details><summary>Где мой чек?</summary><p>Чек самозанятого приходит на e-mail и лежит в кабинете рядом с покупкой.</p></details>
+      <details><summary>Где мой чек?</summary><p>Чек самозанятого приходит ссылкой в бот и лежит в кабинете рядом с покупкой.</p></details>
     </div>`;
 }
 
@@ -559,7 +562,7 @@ function drawSheet(){
       <ul class="toc">${toc.map(r=>`<li><span>${r[0]}</span><span>${r[1]}</span></li>`).join('')}</ul></div>
     <div class="facts"><div><b>${x.files}</b><span>${plural(x.files,'файл','файла','файлов')}</span></div><div><b>${x.code}</b><span>код и модели</span></div><div><b>24ч</b><span>на скачивание</span></div></div>
     <div class="why"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg><span>Смотри, как оформлено и решено, — и делай свою работу по своему варианту. Файлы обезличены.</span></div>
-    <div class="total"><span>${S.first?'Первая покупка: −10%':'Цена'}</span><strong>${fmt(x.p - c.first)}</strong></div>
+    <div class="total"><span>${S.first?'Первая покупка':'Цена'}</span><strong>${fmt(x.p - c.first)}</strong></div>
     <button class="btn" ${LIVE?`data-bot="buy_${x.id}"`:'data-step="pay"'}>Купить образец</button>
     <p style="margin:12px 2px 0;text-align:center"><button class="help-link" data-ask="${x.id}">Задать вопрос по образцу</button></p>
     <p class="fine" style="margin:10px 2px 0">Не предназначен для сдачи как собственная работа. Перепродажа и публикация запрещены офертой.</p>`;
@@ -569,11 +572,11 @@ function drawSheet(){
       ${c.first?`<div><span>Скидка на первый заказ</span><span>−${fmt(c.first)}</span></div>`:''}
       ${c.bonus?`<div><span>Баллами</span><span>−${fmt(c.bonus)}</span></div>`:''}</div>
     <div class="total"><span>К оплате</span><strong>${fmt(c.pay)}</strong></div>
-    <div class="sbp"><span class="lg"><i style="background:#5B57A2"></i><i style="background:#D90751"></i><i style="background:#FAB718"></i><i style="background:#0F9D58"></i></span><span><div class="t">СБП</div><div class="s">Откроется страница оплаты — подтвердите в банке</div></span></div>
+    <div class="sbp"><span class="lg"><i style="background:#5B57A2"></i><i style="background:#D90751"></i><i style="background:#FAB718"></i><i style="background:#0F9D58"></i></span><span><div class="t">Карта или СБП</div><div class="s">Откроется защищённая страница оплаты</div></span></div>
     <label class="check" for="a1"><input type="checkbox" id="a1" ${S.sheet.a1?'checked':''}><span>Принимаю <a href="#" data-doc="offer">оферту</a>: образец — для самостоятельной учёбы</span></label>
     <label class="check" for="a2"><input type="checkbox" id="a2" ${S.sheet.a2?'checked':''}><span>Даю <a href="#" data-doc="consent">согласие</a> на обработку персональных данных по <a href="#" data-doc="privacy">политике</a></span></label>
     <button class="btn" id="paybtn" ${S.sheet.a1&&S.sheet.a2?'':'disabled'}>Оплатить ${fmt(c.pay)}</button>
-    <p class="fine" style="margin:10px 2px 0;text-align:center">Чек самозанятого придёт на e-mail и в кабинет</p>`;
+    <p class="fine" style="margin:10px 2px 0;text-align:center">Чек самозанятого придёт ссылкой в бот и в кабинет</p>`;
   } else {
     inner = `<div class="done"><span class="stamp big ok">оплачено</span><h3>Образец твой</h3><p class="fine" style="font-size:14px">Ссылка на скачивание — в кабинете и в боте, действует 24 часа.</p></div>
       <button class="btn ink" data-go="cabinet">Открыть кабинет</button>
