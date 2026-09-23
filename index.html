@@ -348,7 +348,16 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const plural = (n,a,b,c) => { const m=n%10, h=n%100; return (m===1&&h!==11)?a:(m>=2&&m<=4&&(h<10||h>=20))?b:c; };
 const initials = s => s.replace(/[^А-ЯЁA-Zа-яё ]/g,' ').split(' ').filter(w=>w.length>2).slice(0,2).map(w=>w[0].toUpperCase()).join('') || s.slice(0,2).toUpperCase();
 
-const BUILD = '23.09.2026 11:11';
+const BUILD = '23.09.2026 11:20';
+function showErr(msg){
+  let el = document.getElementById('errbar');
+  if (!el){ el = document.createElement('div'); el.id='errbar';
+    el.style.cssText='position:fixed;left:0;right:0;top:0;z-index:9999;background:#D64646;color:#fff;font:600 12px/1.35 monospace;padding:8px 10px;white-space:pre-wrap';
+    document.body.appendChild(el); }
+  el.textContent = 'СБОЙ: ' + msg;
+}
+window.addEventListener('error', e => showErr((e.message||'ошибка') + ' @' + (e.lineno||'?')));
+window.addEventListener('unhandledrejection', e => showErr('promise: ' + (e.reason && e.reason.message || e.reason)));
 const S = { tab:'catalog', course:3, subject:null, type:'Все', q:'', owned:new Set(), buys:[], consults:[], bonus:120, first:true, sheet:null, dur:45, slot:null, topic:null, order:'', tickets:[], rv:{vol:'m', focus:['struct','code','logic','gost'], file:'', urgent:false}, reviews:[] };
 try { const c = localStorage.getItem('sk-course'); if (c) S.course = +c; } catch(e) {}
 const app = document.getElementById('app'), layer = document.getElementById('layer');
@@ -407,6 +416,7 @@ function viewCatalog(){
       <span class="p">от ${fmt(e.min)}<small>›</small></span></button>`}).join('')}</div>
     <div class="rv-hero"><span class="stamp">проверено</span><h2>Проверка твоей курсовой</h2><p>Присылаешь черновик — возвращаю замечания по структуре, коду, логике и ГОСТу. Правишь сам.</p>
       <div class="row"><b>от ${fmt(1500)} · 3 дня</b><button class="go" data-go="review">Отправить черновик</button></div></div>
+    <p class="note" id="diag">версия ${BUILD} · работ ${ITEMS.length} · курс ${S.course} · показано ${inCourse.length}</p>
     <p class="note">Демо на реальном архиве: цены по ценовой политике, образцы «на проверке» в рабочей версии скрыты до ручной проверки.</p>`;
   return out;
 }
@@ -594,7 +604,7 @@ function drawSheet(){
 }
 function toast(t){ const d=document.createElement('div'); d.className='toast'; d.textContent=t; document.body.appendChild(d); setTimeout(()=>d.remove(),2600); }
 
-document.addEventListener('click', e => {
+function handleTap(e){
   const t = e.target.closest('button,a'); if (!t) return;
   const d = t.dataset;
   if (d.tab){ S.tab=d.tab; S.subject=null; closeSheet(); render(); scrollTo(0,0); return; }
@@ -628,7 +638,13 @@ document.addEventListener('click', e => {
   if (d.tg!==undefined){ const u='https://t.me/'+SUPPORT_USERNAME; if (tg) tg.openTelegramLink(u); else toast('В Telegram откроется чат @'+SUPPORT_USERNAME); return; }
   if (d.dl){ toast(tg ? 'Ссылка на скачивание отправлена в бот' : 'Демо: в рабочей версии ссылка на файл придёт в бот'); return; }
   if (d.doc!==undefined){ e.preventDefault(); openDoc(d.doc||'offer'); return; }
-});
+}
+let lastTap = 0;
+function safeTap(e){
+  try { handleTap(e); } catch (err) { showErr('Ошибка в обработчике: ' + (err && err.message || err)); }
+}
+document.addEventListener('touchend', e => { lastTap = Date.now(); safeTap(e); }, {passive:true});
+document.addEventListener('click', e => { if (Date.now() - lastTap < 800) return; safeTap(e); });
 document.addEventListener('keydown', e => { if (e.key==='Escape' && S.sheet) closeSheet(); });
 if (tg) tg.BackButton.onClick(() => { if (S.sheet) closeSheet(); else { S.subject=null; render(); } });
 render();
