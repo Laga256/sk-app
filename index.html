@@ -37,6 +37,7 @@
   --lift:0 1px 0 rgba(0,0,0,.4),0 16px 34px -18px rgba(0,0,0,.8);
 }
 *{box-sizing:border-box}
+button,a{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,.06)}
 html,body{height:100%}
 body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 var(--sans);-webkit-font-smoothing:antialiased;
   background-image:linear-gradient(var(--rule) 1px,transparent 1px),linear-gradient(90deg,var(--rule) 1px,transparent 1px);background-size:20px 20px}
@@ -348,7 +349,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const plural = (n,a,b,c) => { const m=n%10, h=n%100; return (m===1&&h!==11)?a:(m>=2&&m<=4&&(h<10||h>=20))?b:c; };
 const initials = s => s.replace(/[^А-ЯЁA-Zа-яё ]/g,' ').split(' ').filter(w=>w.length>2).slice(0,2).map(w=>w[0].toUpperCase()).join('') || s.slice(0,2).toUpperCase();
 
-const BUILD = '23.09.2026 11:20';
+const BUILD = '23.09.2026 11:29';
 function showErr(msg){
   let el = document.getElementById('errbar');
   if (!el){ el = document.createElement('div'); el.id='errbar';
@@ -416,7 +417,7 @@ function viewCatalog(){
       <span class="p">от ${fmt(e.min)}<small>›</small></span></button>`}).join('')}</div>
     <div class="rv-hero"><span class="stamp">проверено</span><h2>Проверка твоей курсовой</h2><p>Присылаешь черновик — возвращаю замечания по структуре, коду, логике и ГОСТу. Правишь сам.</p>
       <div class="row"><b>от ${fmt(1500)} · 3 дня</b><button class="go" data-go="review">Отправить черновик</button></div></div>
-    <p class="note" id="diag">версия ${BUILD} · работ ${ITEMS.length} · курс ${S.course} · показано ${inCourse.length}</p>
+    <p class="note" id="diag">версия ${BUILD} · работ ${ITEMS.length} · курс ${S.course} · касаний ${TAPS.touch} · кликов ${TAPS.click} · сработало ${TAPS.act}</p>
     <p class="note">Демо на реальном архиве: цены по ценовой политике, образцы «на проверке» в рабочей версии скрыты до ручной проверки.</p>`;
   return out;
 }
@@ -551,6 +552,7 @@ function render(){
   const q = document.getElementById('q');
   if (q) q.addEventListener('input', e => { S.q=e.target.value; const pos=e.target.selectionStart; render(); const n=document.getElementById('q'); n.focus(); n.setSelectionRange(pos,pos); });
   if (tg){ (S.subject && S.tab==='catalog') ? tg.BackButton.show() : tg.BackButton.hide(); }
+  bindTaps();
 }
 
 /* ---------- покупка ---------- */
@@ -594,6 +596,7 @@ function drawSheet(){
       <p class="note" style="text-align:center">Демо: в рабочей версии сюда возвращаемся со страницы СБП после подтверждения платежа.</p>`;
   }
   layer.innerHTML = `<div class="scrim" data-close></div><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(x.title)}"><div class="grab"></div>${inner}</div>`;
+  bindTaps(layer);
   const a1=document.getElementById('a1'), a2=document.getElementById('a2');
   if (a1) a1.onchange = e => { S.sheet.a1=e.target.checked; drawSheet(); };
   if (a2) a2.onchange = e => { S.sheet.a2=e.target.checked; drawSheet(); };
@@ -605,7 +608,8 @@ function drawSheet(){
 function toast(t){ const d=document.createElement('div'); d.className='toast'; d.textContent=t; document.body.appendChild(d); setTimeout(()=>d.remove(),2600); }
 
 function handleTap(e){
-  const t = e.target.closest('button,a'); if (!t) return;
+  const from = (e.currentTarget && e.currentTarget.closest) ? e.currentTarget : e.target;
+  const t = from.closest('button,a'); if (!t) return;
   const d = t.dataset;
   if (d.tab){ S.tab=d.tab; S.subject=null; closeSheet(); render(); scrollTo(0,0); return; }
   if (d.course){ S.course=+d.course; try{localStorage.setItem('sk-course',S.course)}catch(err){} render(); return; }
@@ -639,12 +643,33 @@ function handleTap(e){
   if (d.dl){ toast(tg ? 'Ссылка на скачивание отправлена в бот' : 'Демо: в рабочей версии ссылка на файл придёт в бот'); return; }
   if (d.doc!==undefined){ e.preventDefault(); openDoc(d.doc||'offer'); return; }
 }
-let lastTap = 0;
-function safeTap(e){
-  try { handleTap(e); } catch (err) { showErr('Ошибка в обработчике: ' + (err && err.message || err)); }
+const TAPS = {touch:0, click:0, act:0};
+function diagUpdate(){
+  const el = document.getElementById('diag');
+  if (el) el.textContent = `версия ${BUILD} · работ ${ITEMS.length} · курс ${S.course} · касаний ${TAPS.touch} · кликов ${TAPS.click} · сработало ${TAPS.act}`;
 }
-document.addEventListener('touchend', e => { lastTap = Date.now(); safeTap(e); }, {passive:true});
-document.addEventListener('click', e => { if (Date.now() - lastTap < 800) return; safeTap(e); });
+let pendingTouch = null;
+function safeTap(e){
+  if (e.__sk) return;                       // один жест — одно действие
+  e.__sk = 1;
+  try { TAPS.act++; handleTap(e); diagUpdate(); }
+  catch (err) { showErr('Ошибка в обработчике: ' + (err && err.message || err)); }
+}
+function bindTaps(root){
+  (root || document).querySelectorAll('button, a').forEach(el => { el.onclick = safeTap; });
+}
+// основной путь — обычный клик; касание срабатывает только если клик так и не пришёл
+document.addEventListener('touchend', e => {
+  TAPS.touch++; diagUpdate();
+  clearTimeout(pendingTouch);
+  pendingTouch = setTimeout(() => { pendingTouch = null; safeTap(e); }, 350);
+}, {passive: true});
+document.addEventListener('click', e => {
+  TAPS.click++; diagUpdate();
+  clearTimeout(pendingTouch); pendingTouch = null;
+  safeTap(e);
+});
+
 document.addEventListener('keydown', e => { if (e.key==='Escape' && S.sheet) closeSheet(); });
 if (tg) tg.BackButton.onClick(() => { if (S.sheet) closeSheet(); else { S.subject=null; render(); } });
 render();
