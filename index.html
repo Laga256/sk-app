@@ -352,7 +352,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const plural = (n,a,b,c) => { const m=n%10, h=n%100; return (m===1&&h!==11)?a:(m>=2&&m<=4&&(h<10||h>=20))?b:c; };
 const initials = s => s.replace(/[^А-ЯЁA-Zа-яё ]/g,' ').split(' ').filter(w=>w.length>2).slice(0,2).map(w=>w[0].toUpperCase()).join('') || s.slice(0,2).toUpperCase();
 
-const BUILD = '24.09.2026 10:50';
+const BUILD = '24.09.2026 02:27';
 function showErr(msg){
   let el = document.getElementById('errbar');
   if (!el){ el = document.createElement('div'); el.id='errbar';
@@ -362,7 +362,7 @@ function showErr(msg){
 }
 window.addEventListener('error', e => showErr((e.message||'ошибка') + ' @' + (e.lineno||'?')));
 window.addEventListener('unhandledrejection', e => showErr('promise: ' + (e.reason && e.reason.message || e.reason)));
-const S = { tab:'catalog', course:3, subject:null, type:'Все', q:'', owned:new Set(), buys:[], consults:[], bonus:120, first:true, sheet:null, dur:45, slot:null, topic:null, order:'', tickets:[], rv:{vol:'m', focus:['struct','code','logic','gost'], file:'', urgent:false}, reviews:[] };
+const S = { tab:'catalog', course:3, subject:null, type:'Все', q:'', topicDefault:'work', owned:new Set(), buys:[], consults:[], bonus:120, first:true, sheet:null, dur:45, slot:null, topic:null, order:'', tickets:[], rv:{vol:'m', focus:['struct','code','logic','gost'], file:'', urgent:false}, reviews:[] };
 try { const c = localStorage.getItem('sk-course'); if (c) S.course = +c; } catch(e) {}
 const app = document.getElementById('app'), layer = document.getElementById('layer');
 
@@ -489,12 +489,7 @@ function viewCabinet(){
 
 const TOPICS = [
   {k:'pay', l:'Проблема с оплатой', i:'<path d="M3 7h18v10H3z"/><path d="M3 11h18"/>'},
-  {k:'dl', l:'Не скачивается файл', i:'<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'},
-  {k:'refund', l:'Не соответствует описанию', i:'<path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v4h4"/>'},
-  {k:'rv', l:'Проверка курсовой', i:'<path d="M5 4h10l4 4v12H5z"/><path d="M9 14l2 2 4-4"/>'},
-  {k:'q', l:'Вопрос по образцу', i:'<path d="M5 4h10l4 4v12H5z"/><path d="M14 4v5h5"/>'},
-  {k:'data', l:'Удалить мои данные', i:'<path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'},
-  {k:'other', l:'Другое', i:'<circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/>'}];
+  {k:'work', l:'Помощь по работам', i:'<path d="M5 4h10l4 4v12H5z"/><path d="M9 13h6M9 17h4"/>'}];
 const RV_VOL = {s:{l:'До 25 страниц',d:'без программной части',p:1500}, m:{l:'25–40 страниц',d:'или с небольшим кодом',p:2200}, l:{l:'Больше 40 страниц',d:'или с программой/БД',p:3000}};
 const RV_FOCUS = {struct:'Структура',code:'Код',logic:'Логика и расчёты',gost:'Оформление ГОСТ'};
 const RV_URGENT = 700;
@@ -528,13 +523,13 @@ function viewSupport(){
   return appHead() + `<section class="hero" style="margin-bottom:10px"><h1>Помощь</h1><p>Ответим в этом чате. Обычно — в течение пары часов, с 10:00 до 22:00 по Хабаровску.</p></section>
     <div class="sec"><h2>Что случилось</h2></div>
     <div class="topics" role="group" aria-label="Тема обращения">${TOPICS.map(x=>`<button class="topic" data-topic="${x.k}" aria-pressed="${S.topic===x.k}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${x.i}</svg><b>${x.l}</b></button>`).join('')}</div>
-    ${S.topic?`<div class="card" style="margin-top:12px">
+    ${true?`<div class="card" style="margin-top:12px">
       ${S.buys.length && S.topic!=='data' && S.topic!=='other'?`<div class="field"><label for="s-order">Заказ</label><select id="s-order"><option value="">Без привязки к заказу</option>${orders}</select></div>`:''}
       <div class="field"><label for="s-msg">Сообщение</label><textarea id="s-msg" placeholder="${S.topic==='refund'?'Что именно не совпадает с описанием карточки?':S.topic==='pay'?'Деньги списались, но образец не появился? Укажите время оплаты':S.topic==='data'?'Удалим аккаунт, историю покупок и баллы. Чеки ФНС хранятся по закону':'Опишите вопрос'}"></textarea></div>
       <button class="btn" id="s-send">Отправить в поддержку</button>
       <div class="sla"><i></i>обращение уйдёт в бот, ответ придёт сообщением</div></div>`:''}
     ${S.tickets.length?S.tickets.map(tk=>`<div class="ticket-ok">Обращение <b>#${tk.n}</b> принято: ${esc(tk.l)}. Ответ придёт в этот чат.</div>`).join(''):''}
-    <button class="tgbtn" data-tg><span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21.5 4.3 2.9 11.4c-1 .4-1 1.8.1 2.1l4.6 1.4 1.8 5.5c.3.8 1.3 1 1.9.4l2.6-2.5 4.7 3.5c.7.5 1.7.1 1.9-.7l3-15.2c.2-1-.8-1.8-1.9-1.4zM9.6 14.6l-.4 3.6-1.3-4 9.4-6.3z"/></svg></span><span><b>Написать в Telegram</b><small>@${SUPPORT_USERNAME}</small></span></button>
+    <p class="fine" style="margin:14px 2px 0;text-align:center"><button class="help-link" data-bot="mydata">Мои данные и удаление аккаунта</button></p>
     <div class="sec"><h2>Частые вопросы</h2></div>
     <div class="card faq" style="padding-block:4px">
       <details><summary>Оплатил, но образца нет в кабинете</summary><p>Платёж по СБП подтверждается до 5 минут. Если прошло больше — выберите «Проблема с оплатой» и укажите время: проверим и выдадим доступ или вернём деньги.</p></details>
@@ -579,7 +574,7 @@ function drawSheet(){
     <div class="facts"><div><b>${x.files}</b><span>${plural(x.files,'файл','файла','файлов')}</span></div><div><b>${x.code}</b><span>код и модели</span></div><div><b>24ч</b><span>на скачивание</span></div></div>
     <div class="why"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg><span>Смотри, как оформлено и решено, — и делай свою работу по своему варианту. Файлы обезличены.</span></div>
     <div class="total"><span>${S.first?'Первая покупка':'Цена'}</span><strong>${fmt(x.p - c.first)}</strong></div>
-    <button class="btn" ${LIVE?`data-bot="buy_${x.id}"`:'data-step="pay"'}>Купить образец</button>
+    <button class="btn" ${LIVE?`data-send="buy:${x.id}"`:'data-step="pay"'}>Купить образец</button>
     <p style="margin:12px 2px 0;text-align:center"><button class="help-link" data-ask="${x.id}">Задать вопрос по образцу</button></p>
     <p class="fine" style="margin:10px 2px 0">Не предназначен для сдачи как собственная работа. Перепродажа и публикация запрещены офертой.</p>`;
   } else if (step==='pay'){
@@ -650,13 +645,24 @@ function handleTap(e){
     S.rv={vol:'m', focus:['struct','code','logic','gost'], file:'', urgent:false}; S.tab='cabinet'; render(); scrollTo(0,0); toast('Оплачено. Черновик принят на проверку'); return; }
   if (d.topic){ S.topic=d.topic; render(); return; }
   if (d.help){ S.tab='support'; S.topic='dl'; S.order=d.help; render(); scrollTo(0,0); return; }
-  if (d.ask){ closeSheet(); S.tab='support'; S.topic='q'; S.subject=null; render(); scrollTo(0,0); const m=document.getElementById('s-msg'); if (m) m.value='Вопрос по образцу «'+ITEMS.find(i=>i.id===+d.ask).title+'»: '; return; }
-  if (t.id==='s-send' && LIVE){ toBot('help'); return; }
+  if (d.ask){ if (LIVE) { toBot('ask_' + d.ask); return; } closeSheet(); S.tab='support'; S.topic='q'; S.subject=null; render(); scrollTo(0,0); return; }
+  if (t.id==='s-send' && LIVE){
+    const m=document.getElementById('s-msg');
+    if (!m || !m.value.trim()){ if(m) m.focus(); toast('Опишите вопрос парой слов'); return; }
+    const payload = JSON.stringify({t:'help', topic:(S.topic||'work'), text:m.value.trim().slice(0,1500)});
+    try { tg.sendData(payload); }                       // уходит боту, приложение закрывается само
+    catch (err) { toBot('help'); }
+    return; }
   if (t.id==='s-send'){ const m=document.getElementById('s-msg'); if (!m.value.trim()){ m.focus(); toast('Напишите пару слов о проблеме'); return; }
     // рабочая версия: POST /api/support {topic, order_id, text} → бот пересылает в чат поддержки
     const tp=TOPICS.find(x=>x.k===S.topic); S.tickets.unshift({n:1040+S.tickets.length+1, l:tp.l}); S.topic=null; S.order=''; render(); toast(tg ? 'Отправлено в поддержку' : 'Демо: в рабочей версии обращение уйдёт в бот поддержки'); return; }
-  if (d.tg!==undefined){ const u='https://t.me/'+SUPPORT_USERNAME; if (tg) tg.openTelegramLink(u); else toast('В Telegram откроется чат @'+SUPPORT_USERNAME); return; }
+  if (d.tg!==undefined){ if (LIVE) { toBot('help'); } else { toast('В рабочей версии откроется чат с ботом'); } return; }
   if (d.dl){ toast(tg ? 'Ссылка на скачивание отправлена в бот' : 'Демо: в рабочей версии ссылка на файл придёт в бот'); return; }
+  if (d.send){
+    const [kind, id] = d.send.split(':');
+    try { tg.sendData(JSON.stringify({t:kind, id:+id})); }
+    catch (err) { toBot(kind + '_' + id); }
+    return; }
   if (d.doc!==undefined){ e.preventDefault(); openDoc(d.doc||'offer'); return; }
 }
 const TAPS = {touch:0, click:0, act:0};
@@ -675,11 +681,6 @@ function bindTaps(root){
   (root || document).querySelectorAll('button, a, [data-close]').forEach(el => { el.onclick = safeTap; });
 }
 // основной путь — обычный клик; касание срабатывает только если клик так и не пришёл
-document.addEventListener('touchend', e => {
-  TAPS.touch++; diagUpdate();
-  clearTimeout(pendingTouch);
-  pendingTouch = setTimeout(() => { pendingTouch = null; safeTap(e); }, 350);
-}, {passive: true});
 document.addEventListener('click', e => {
   TAPS.click++; diagUpdate();
   clearTimeout(pendingTouch); pendingTouch = null;
