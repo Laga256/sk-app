@@ -153,7 +153,9 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-width:520px;margin:0 auto;background:var(--paper);border-radius:22px 22px 0 0;
   padding:10px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:90%;overflow:auto;animation:up .26s cubic-bezier(.2,.8,.2,1)}
 @keyframes up{from{transform:translateY(40px);opacity:.4}}
-.grab{width:42px;height:4px;border-radius:4px;background:var(--line);margin:0 auto 14px}
+.sheetbar{position:sticky;top:-10px;z-index:4;height:42px;margin:-10px -6px 2px;display:flex;align-items:center;justify-content:center;touch-action:none;background:linear-gradient(var(--paper) 75%,transparent)}
+.grab{width:46px;height:5px;border-radius:5px;background:var(--ink-3);opacity:.55}
+.sheet-close{position:absolute;right:0;top:6px;width:34px;height:34px;border:0;border-radius:50%;background:var(--paper-2);color:var(--ink-2);display:grid;place-items:center;font:700 22px/1 var(--sans);padding:0}
 .preview{position:relative;border:1px solid var(--line);border-radius:14px;background:var(--sheet);padding:16px 16px 14px 30px;overflow:hidden;box-shadow:var(--lift);
   background-image:linear-gradient(90deg,transparent 18px,var(--margin) 18px,var(--margin) 19px,transparent 19px),repeating-linear-gradient(var(--sheet) 0 23px,var(--rule) 23px 24px)}
 .preview .hd{font:500 11px var(--mono);color:var(--ink-3)}
@@ -285,7 +287,7 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 
 /* ---------- таббар ---------- */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:10;padding:0 12px calc(10px + env(safe-area-inset-bottom,0px))}
-.tabbar nav{max-width:420px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--ink);border-radius:20px;padding:6px;box-shadow:0 18px 30px -16px rgba(0,0,0,.55)}
+.tabbar nav{max-width:420px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--ink);border-radius:20px;padding:6px;box-shadow:0 18px 30px -16px rgba(0,0,0,.55)}
 .tabbar button{border:0;background:none;border-radius:14px;padding:9px 4px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px;font-weight:600;color:var(--paper);opacity:.6;transition:background .15s,opacity .15s}
 .tabbar button[aria-current="page"]{background:var(--hl);color:#121A16;opacity:1}
 .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:30;background:var(--ink);color:var(--paper);padding:11px 15px;border-radius:12px;font-size:13.5px;max-width:calc(100% - 32px);box-shadow:var(--lift)}
@@ -299,7 +301,6 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
   <button data-tab="catalog" aria-current="page"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h10l4 4v12H5z"/><path d="M14 4v5h5M8 13h8M8 17h5"/></svg>Образцы</button>
   <button data-tab="support"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.7M12 17h.01"/></svg>Помощь</button>
   <button data-tab="cabinet"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Кабинет</button>
-  <button data-exit hidden aria-label="Закрыть приложение"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>Закрыть</button>
 </nav></div>
 <div id="layer"></div>
 
@@ -310,8 +311,6 @@ if (tg) { tg.ready(); tg.expand(); }
 const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
 const BOT = 'starshiy_kurs_bot';
 const LIVE = !!(tg && tg.initData);           // открыт внутри Telegram
-const exitButton = document.querySelector('[data-exit]');
-if (exitButton && LIVE) exitButton.hidden = false;
 function toBot(param){ const u='https://t.me/'+BOT+'?start='+param; if (LIVE){ tg.openTelegramLink(u); setTimeout(()=>tg.close(),300); } else toast('В Telegram здесь откроется бот: '+param); }
 
 /* ---------- названия (в рабочей версии — из админки) ---------- */
@@ -353,7 +352,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const plural = (n,a,b,c) => { const m=n%10, h=n%100; return (m===1&&h!==11)?a:(m>=2&&m<=4&&(h<10||h>=20))?b:c; };
 const initials = s => s.replace(/[^А-ЯЁA-Zа-яё ]/g,' ').split(' ').filter(w=>w.length>2).slice(0,2).map(w=>w[0].toUpperCase()).join('') || s.slice(0,2).toUpperCase();
 
-const BUILD = '23.09.2026 22:34';
+const BUILD = '24.09.2026 10:50';
 function showErr(msg){
   let el = document.getElementById('errbar');
   if (!el){ el = document.createElement('div'); el.id='errbar';
@@ -599,8 +598,9 @@ function drawSheet(){
       <button class="btn ink" data-go="cabinet">Открыть кабинет</button>
       <p class="note" style="text-align:center">Демо: в рабочей версии сюда возвращаемся со страницы СБП после подтверждения платежа.</p>`;
   }
-  layer.innerHTML = `<div class="scrim" data-close></div><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(x.title)}"><div class="grab"></div>${inner}</div>`;
+  layer.innerHTML = `<div class="scrim" data-close></div><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(x.title)}"><div class="sheetbar"><div class="grab" aria-hidden="true"></div><button class="sheet-close" data-close aria-label="Закрыть карточку">×</button></div>${inner}</div>`;
   bindTaps(layer);
+  bindSheetDismiss();
   const a1=document.getElementById('a1'), a2=document.getElementById('a2');
   if (a1) a1.onchange = e => { S.sheet.a1=e.target.checked; drawSheet(); };
   if (a2) a2.onchange = e => { S.sheet.a2=e.target.checked; drawSheet(); };
@@ -611,12 +611,23 @@ function drawSheet(){
 }
 function toast(t){ const d=document.createElement('div'); d.className='toast'; d.textContent=t; document.body.appendChild(d); setTimeout(()=>d.remove(),2600); }
 
+function bindSheetDismiss(){
+  const sheet=layer.querySelector('.sheet'), bar=layer.querySelector('.sheetbar'), scrim=layer.querySelector('.scrim');
+  if (!sheet || !bar) return;
+  let startY=null, dy=0;
+  const reset=()=>{ sheet.style.transition='transform .18s ease'; sheet.style.transform=''; if(scrim){scrim.style.transition='opacity .18s ease';scrim.style.opacity='';} setTimeout(()=>{ if(sheet){sheet.style.transition='';} if(scrim){scrim.style.transition='';} },190); };
+  bar.addEventListener('pointerdown',e=>{ if(e.target.closest('button'))return; startY=e.clientY; dy=0; sheet.style.animation='none'; if(bar.setPointerCapture) bar.setPointerCapture(e.pointerId); });
+  bar.addEventListener('pointermove',e=>{ if(startY===null)return; dy=Math.max(0,e.clientY-startY); sheet.style.transform=`translateY(${dy}px)`; if(scrim) scrim.style.opacity=String(Math.max(0,.5-dy/400)); });
+  const finish=e=>{ if(startY===null)return; dy=Math.max(dy,e.clientY-startY); startY=null; if(dy >= 70) closeSheet(); else reset(); };
+  bar.addEventListener('pointerup',finish);
+  bar.addEventListener('pointercancel',()=>{ startY=null; reset(); });
+}
+
 function handleTap(e){
   const from = (e.currentTarget && e.currentTarget.closest) ? e.currentTarget : e.target;
-  const t = from.closest('button,a'); if (!t) return;
+  const t = from.closest('button,a,[data-close]'); if (!t) return;
   const d = t.dataset;
   if (d.tab){ S.tab=d.tab; S.subject=null; closeSheet(); render(); scrollTo(0,0); return; }
-  if (d.exit!==undefined){ if (S.sheet) closeSheet(); else if (tg) tg.close(); return; }
   if (d.course){ S.course=+d.course; try{localStorage.setItem('sk-course',S.course)}catch(err){} render(); return; }
   if (d.subject!==undefined){ S.subject=d.subject; S.type='Все'; render(); scrollTo(0,0); return; }
   if (d.back!==undefined){ S.subject=null; render(); return; }
@@ -661,7 +672,7 @@ function safeTap(e){
   catch (err) { showErr('Ошибка в обработчике: ' + (err && err.message || err)); }
 }
 function bindTaps(root){
-  (root || document).querySelectorAll('button, a').forEach(el => { el.onclick = safeTap; });
+  (root || document).querySelectorAll('button, a, [data-close]').forEach(el => { el.onclick = safeTap; });
 }
 // основной путь — обычный клик; касание срабатывает только если клик так и не пришёл
 document.addEventListener('touchend', e => {
