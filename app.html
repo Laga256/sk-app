@@ -310,7 +310,8 @@ const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : 
 if (tg) { tg.ready(); tg.expand(); }
 const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
 const BOT = 'starshiy_kurs_bot';
-const LIVE = !!(tg && tg.initData);           // открыт внутри Telegram
+const LIVE = !!(tg && (tg.initData || (tg.initDataUnsafe && tg.initDataUnsafe.user)));           // открыт внутри Telegram
+function copyText(t){ try { navigator.clipboard && navigator.clipboard.writeText(t); } catch (e) {} }
 function toBot(param){ const u='https://t.me/'+BOT+'?start='+param; if (LIVE){ tg.openTelegramLink(u); setTimeout(()=>tg.close(),300); } else toast('В Telegram здесь откроется бот: '+param); }
 
 /* ---------- названия (в рабочей версии — из админки) ---------- */
@@ -352,7 +353,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const plural = (n,a,b,c) => { const m=n%10, h=n%100; return (m===1&&h!==11)?a:(m>=2&&m<=4&&(h<10||h>=20))?b:c; };
 const initials = s => s.replace(/[^А-ЯЁA-Zа-яё ]/g,' ').split(' ').filter(w=>w.length>2).slice(0,2).map(w=>w[0].toUpperCase()).join('') || s.slice(0,2).toUpperCase();
 
-const BUILD = '24.09.2026 02:27';
+const BUILD = '24.09.2026 02:40';
 function showErr(msg){
   let el = document.getElementById('errbar');
   if (!el){ el = document.createElement('div'); el.id='errbar';
@@ -646,16 +647,19 @@ function handleTap(e){
   if (d.topic){ S.topic=d.topic; render(); return; }
   if (d.help){ S.tab='support'; S.topic='dl'; S.order=d.help; render(); scrollTo(0,0); return; }
   if (d.ask){ if (LIVE) { toBot('ask_' + d.ask); return; } closeSheet(); S.tab='support'; S.topic='q'; S.subject=null; render(); scrollTo(0,0); return; }
-  if (t.id==='s-send' && LIVE){
+  if (t.id==='s-send'){
     const m=document.getElementById('s-msg');
-    if (!m || !m.value.trim()){ if(m) m.focus(); toast('Опишите вопрос парой слов'); return; }
-    const payload = JSON.stringify({t:'help', topic:(S.topic||'work'), text:m.value.trim().slice(0,1500)});
-    try { tg.sendData(payload); }                       // уходит боту, приложение закрывается само
-    catch (err) { toBot('help'); }
-    return; }
-  if (t.id==='s-send'){ const m=document.getElementById('s-msg'); if (!m.value.trim()){ m.focus(); toast('Напишите пару слов о проблеме'); return; }
-    // рабочая версия: POST /api/support {topic, order_id, text} → бот пересылает в чат поддержки
-    const tp=TOPICS.find(x=>x.k===S.topic); S.tickets.unshift({n:1040+S.tickets.length+1, l:tp.l}); S.topic=null; S.order=''; render(); toast(tg ? 'Отправлено в поддержку' : 'Демо: в рабочей версии обращение уйдёт в бот поддержки'); return; }
+    if (!m || !m.value.trim()){ if (m) m.focus(); toast('Опишите вопрос парой слов'); return; }
+    const topic = S.topic || 'work';
+    const text = m.value.trim().slice(0,1500);
+    if (tg && typeof tg.sendData === 'function' && LIVE){
+      try { tg.sendData(JSON.stringify({t:'help', topic:topic, text:text})); return; }   // уходит боту, окно закроется само
+      catch (err) { copyText(text); toBot('help'); return; }                             // не дал — открываем чат, текст в буфере
+    }
+    if (tg){ copyText(text); toast('Текст скопирован — вставьте его в чат'); toBot('help'); return; }
+    const tp = TOPICS.find(x=>x.k===topic) || {l:'Обращение'};
+    S.tickets.unshift({n:1040+S.tickets.length+1, l:tp.l}); S.topic=null; S.order=''; m.value='';
+    render(); toast('Демо: в рабочей версии обращение уйдёт в бот'); return; }
   if (d.tg!==undefined){ if (LIVE) { toBot('help'); } else { toast('В рабочей версии откроется чат с ботом'); } return; }
   if (d.dl){ toast(tg ? 'Ссылка на скачивание отправлена в бот' : 'Демо: в рабочей версии ссылка на файл придёт в бот'); return; }
   if (d.send){
