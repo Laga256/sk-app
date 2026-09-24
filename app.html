@@ -311,6 +311,19 @@ if (tg) { tg.ready(); tg.expand(); }
 const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
 const BOT = 'starshiy_kurs_bot';
 const LIVE = !!tg;           // открыт внутри Telegram
+function sendToBot(payload, fallback, onFail){
+  // Telegram разрешает sendData только из нижней кнопки; в остальных случаях он молча ничего не делает,
+  // поэтому подстраховываемся: если через 700 мс приложение всё ещё открыто — уходим в чат.
+  let tried = false;
+  if (tg && typeof tg.sendData === 'function'){
+    try { tg.sendData(JSON.stringify(payload)); tried = true; } catch (err) { tried = false; }
+  }
+  setTimeout(() => {
+    if (document.hidden) return;          // приложение закрылось — значит, сообщение ушло
+    if (onFail) onFail();
+    toBot(fallback);
+  }, tried ? 700 : 0);
+}
 function copyText(t){ try { navigator.clipboard && navigator.clipboard.writeText(t); } catch (e) {} }
 function toBot(param){
   const u='https://t.me/'+BOT+'?start='+param;
@@ -358,7 +371,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const plural = (n,a,b,c) => { const m=n%10, h=n%100; return (m===1&&h!==11)?a:(m>=2&&m<=4&&(h<10||h>=20))?b:c; };
 const initials = s => s.replace(/[^А-ЯЁA-Zа-яё ]/g,' ').split(' ').filter(w=>w.length>2).slice(0,2).map(w=>w[0].toUpperCase()).join('') || s.slice(0,2).toUpperCase();
 
-const BUILD = '24.09.2026 02:51';
+const BUILD = '24.09.2026 03:02';
 function showErr(msg){
   let el = document.getElementById('errbar');
   if (!el){ el = document.createElement('div'); el.id='errbar';
@@ -658,11 +671,9 @@ function handleTap(e){
     if (!m || !m.value.trim()){ if (m) m.focus(); toast('Опишите вопрос парой слов'); return; }
     const topic = S.topic || 'work';
     const text = m.value.trim().slice(0,1500);
-    if (tg && typeof tg.sendData === 'function'){
-      try { tg.sendData(JSON.stringify({t:'help', topic:topic, text:text})); return; }   // уходит боту, окно закроется само
-      catch (err) { copyText(text); toast('Открываю чат, текст скопирован'); toBot('help'); return; }
-    }
-    if (tg){ copyText(text); toast('Открываю чат, текст скопирован'); toBot('help'); return; }
+    if (tg){
+      sendToBot({t:'help', topic:topic, text:text}, 'help', () => { copyText(text); toast('Открываю чат, текст скопирован'); });
+      return; }
     const tp = TOPICS.find(x=>x.k===topic) || {l:'Обращение'};
     S.tickets.unshift({n:1040+S.tickets.length+1, l:tp.l}); S.topic=null; S.order=''; m.value='';
     render(); toast('Демо: в рабочей версии обращение уйдёт в бот'); return; }
@@ -670,11 +681,8 @@ function handleTap(e){
   if (d.dl){ toast(tg ? 'Ссылка на скачивание отправлена в бот' : 'Демо: в рабочей версии ссылка на файл придёт в бот'); return; }
   if (d.send){
     const [kind, id] = d.send.split(':');
-    if (tg && typeof tg.sendData === 'function'){
-      try { tg.sendData(JSON.stringify({t:kind, id:+id})); return; }
-      catch (err) {}
-    }
-    toBot(kind + '_' + id); return; }
+    sendToBot({t:kind, id:+id}, kind + '_' + id);
+    return; }
   if (d.doc!==undefined){ e.preventDefault(); openDoc(d.doc||'offer'); return; }
 }
 const TAPS = {touch:0, click:0, act:0};
